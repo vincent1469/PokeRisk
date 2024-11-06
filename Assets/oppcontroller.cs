@@ -27,10 +27,12 @@ public class oppcontroller : MonoBehaviour
     private healthbar healthBar; 
     private enum Behavior {
         Melee_Passive = 1,
-        Melee_QuickAttack = 2
+        Melee_QuickAttack = 2,
+        Melee_Magnitude = 3
     }
     private Behavior previousBehavior;
     private Behavior currentBehavior;
+    private Behavior attackBehavior;
 
     // create attack variables
     private ScoreCounter scoreCounter;
@@ -41,11 +43,14 @@ public class oppcontroller : MonoBehaviour
     private float meleeRange;
     private float meleeCooldown;
     private float lastAttack = 0f;
+    private bool playerChase = false;
     private bool playerCollision = false;
-    [SerializeField] private AudioClip quickattack;
-    [SerializeField] private AudioClip spotted;
-    private GameObject exclamation;
     private AudioSource attackSoundEffect;
+    private GameObject exclamation;
+    [SerializeField] private AudioClip spotted;
+    [SerializeField] private AudioClip quickattack;
+    [SerializeField] private AudioClip magnitude;
+    private GameObject magnitudeZone;
 
     void Awake() {
         // get animator and collision from the inspector
@@ -56,8 +61,14 @@ public class oppcontroller : MonoBehaviour
         rb.isKinematic = true;
         polygonCollider = GetComponent<PolygonCollider2D>();
         healthBar = GetComponentInChildren<healthbar>();
+
+        // get children assets
         exclamation = transform.Find("exclamation").gameObject;
+        exclamation.GetComponent<child>().setOffset(new Vector3(0, 0.01f, 0));
         exclamation.SetActive(false);
+        magnitudeZone = transform.Find("magnitudeZone").gameObject;
+        magnitudeZone.GetComponent<child>().setOffset(new Vector3(-0.1f, -0.15f, 0));
+        magnitudeZone.SetActive(false);
 
         // get player and score
         game = Camera.main.gameObject;
@@ -75,8 +86,23 @@ public class oppcontroller : MonoBehaviour
 
     void Update() {
         CheckOutOfBounds();
-        if (currentBehavior == Behavior.Melee_Passive) Melee_Passive();
-        else if (currentBehavior == Behavior.Melee_QuickAttack) Melee_QuickAttack();
+        if (playerChase) {
+            Vector2 directionToPlayer = (player.transform.position - transform.position).normalized;
+            SetDirectionTowardsPlayer(directionToPlayer);
+            ClearAnimator(pokemon);
+            SetAnimator(pokemon);
+        }
+        switch (currentBehavior) {
+            case Behavior.Melee_Passive:
+                Melee_Passive();
+                break;
+            case Behavior.Melee_QuickAttack:
+                Melee_QuickAttack();
+                break;
+            case Behavior.Melee_Magnitude:
+                Melee_Magnitude();
+                break;
+        }
     }
 
     private void CheckOutOfBounds() {
@@ -116,6 +142,7 @@ public class oppcontroller : MonoBehaviour
         else if (currentDirection == Direction.X_Neg) animator.SetBool($"{type}_1", true);
         else if (currentDirection == Direction.Y_Pos) animator.SetBool($"{type}_3", true);
         else animator.SetBool($"{type}_0", true);
+        UpdatePolygonCollider();
     }
     private void ClearAnimator(string type) { // clear animation if switching
         animator.SetBool($"{type}_0", false);
@@ -147,7 +174,7 @@ public class oppcontroller : MonoBehaviour
     private void OnCollisionExit2D(Collision2D collision) { if (collision.gameObject == player) playerCollision = false; }
 
     // template for spawning pokemon
-    private void spawn(string pokemonID, string type1, string type2, float moveSpeed, int HP, float meleeR, int meleeP, float meleeC, AudioClip attackNoise, Behavior defaultBehavior) {
+    private void spawn(string pokemonID, string type1, string type2, float moveSpeed, int HP, float meleeR, int meleeP, float meleeC, AudioClip attackNoise, Behavior defaultBehavior, Behavior attackingBehavior) {
         justSpawned = true;
         pokemon = pokemonID;
         SetAnimator(pokemon);
@@ -164,12 +191,14 @@ public class oppcontroller : MonoBehaviour
         attackSoundEffect.volume = 0.5f;
         currentBehavior = defaultBehavior;
         previousBehavior = defaultBehavior;
+        attackBehavior = attackingBehavior;
         justSpawned = false;
     }
 
-    // meta information for spawn enemies
-    public void spawnPidgey() { spawn("016", "NORMAL", "FLYING", 7f, 30, 2.5f, 5, 1f, quickattack, Behavior.Melee_Passive); }
-    public void spawnRattata() { spawn("019", "NORMAL", "NA", 7f, 30, 2f, 5, 1.5f, quickattack, Behavior.Melee_Passive); }
+    // meta information for spawning different enemies
+    public void spawnPidgey() { spawn("016", "NORMAL", "FLYING", 6f, 30, 2.5f, 5, 1f, quickattack, Behavior.Melee_Passive, Behavior.Melee_QuickAttack); }
+    public void spawnRattata() { spawn("019", "NORMAL", "NA", 7f, 30, 2f, 5, 1.5f, quickattack, Behavior.Melee_Passive, Behavior.Melee_QuickAttack); }
+    public void spawnGeodude() { spawn("074", "ROCK", "GROUND", 2.5f, 50, 2f, 9, 2f, magnitude, Behavior.Melee_Passive, Behavior.Melee_Magnitude); }
 
     // behavior where enemies move to other side unless the player intrudes
     private void Melee_Passive() {
@@ -196,9 +225,19 @@ public class oppcontroller : MonoBehaviour
         if (Vector2.Distance(transform.position, player.transform.position) <= meleeRange) {
             if (Time.time >= lastAttack + meleeCooldown) {
                 previousBehavior = Behavior.Melee_Passive;
-                currentBehavior = Behavior.Melee_QuickAttack;
+                currentBehavior = attackBehavior;
             }
         }
+    }
+
+    // easily go back after an attack to the previous behavior
+    private void recharge(Behavior successfulAttack) {
+        ClearAnimator(pokemon);
+        SetAnimator(pokemon);
+        exclamation.SetActive(false);
+        currentBehavior = previousBehavior;
+        previousBehavior = successfulAttack;
+        playerCollision = false;
     }
 
     // behavior where enemies gain a speed boost upon chasing the player
@@ -223,7 +262,7 @@ public class oppcontroller : MonoBehaviour
         SetDirectionTowardsPlayer(directionToPlayer);
         ClearAnimator(pokemon);
         SetAnimator(pokemon);
-        animator.speed = 0; // pause animation while chasing
+        playerChase = true;
         transform.position = Vector2.MoveTowards(transform.position, player.transform.position, speed * 1.25f * Time.deltaTime);
 
         // attack once collided
@@ -236,13 +275,62 @@ public class oppcontroller : MonoBehaviour
             }
 
             // after attack go back to how things were
-            animator.speed = 0.66f;
-            ClearAnimator(pokemon);
-            SetAnimator(pokemon);
-            exclamation.SetActive(false);
-            currentBehavior = previousBehavior;
-            previousBehavior = Behavior.Melee_QuickAttack;
-            playerCollision = false;
+            playerChase = false;
+            recharge(Behavior.Melee_QuickAttack);
         }
+    }    
+
+    // behavior where enemies stop to do a MAGNITUDE if the player gets too close
+    private void Melee_Magnitude() {
+        // cooldown check
+        if (Time.time < lastAttack + meleeCooldown) {
+            currentBehavior = previousBehavior;
+            return;
+        }
+        
+        // check out of bounds before anything
+        CheckOutOfBounds();
+
+        // play sound of getting spotted and show exclamation
+        if (!exclamation.activeSelf) { // was playing sound multiple times without condition
+            attackSoundEffect.PlayOneShot(spotted, attackSoundEffect.volume); 
+            exclamation.SetActive(true);
+        }
+        
+        // change to direction of player and MAGNITUDE
+        magnitudeZone.GetComponent<child>().setAttack("magnitude");
+        magnitudeZone.GetComponent<child>().setAttacker(this);
+        Vector2 directionToPlayer = (player.transform.position - transform.position).normalized;
+        SetDirectionTowardsPlayer(directionToPlayer);
+        ClearAnimator(pokemon);
+        SetAnimator(pokemon);
+        playerChase = true;
+
+        // the MAGNITUDE user must recover after using His mighty power
+        StartCoroutine(MagnitudeRecover());
+        lastAttack = Time.time;
+    }
+    private IEnumerator MagnitudeRecover() {
+        yield return new WaitForSeconds(0.67f);
+        
+        // MAGNITUDE
+        if (!magnitudeZone.activeSelf) { // don't want to play multiple times
+            attackSoundEffect.Play(); 
+            magnitudeZone.SetActive(true);
+        }
+
+        // MAGNITUDE lasts for a second
+        yield return new WaitForSeconds(0.75f);
+        playerChase = false;
+        magnitudeZone.SetActive(false);
+        exclamation.SetActive(false);
+
+        // MAGNITUDE user is so weaken by His power that he must stay still to recover
+        yield return new WaitForSeconds(0.75f);
+        recharge(Behavior.Melee_Magnitude);
+    }
+    public void MagnitudeHit() { // if the MAGNITUDE hits the player this is called
+        playercontroller attacked = player.GetComponent<playercontroller>();
+        if (attacked != null) attacked.TakeDamage(meleePower, typechart.TYPE.GROUND);
     }
 }

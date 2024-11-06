@@ -7,7 +7,7 @@ public class spawner : MonoBehaviour
     // pokemon variables
     [SerializeField] private GameObject oppPrefab;
     private string oppSelect;
-    private float defaultSpawnRate = 3f;
+    private float defaultSpawnRate = 2f;
     private float spawnrate;
     private WaveTracker waveTracker;
 
@@ -26,38 +26,72 @@ public class spawner : MonoBehaviour
         waveTracker = waveGO.GetComponent<WaveTracker>();
         transform.position = new Vector3(-xBorder, yBorder, 0);
         spawnrate = defaultSpawnRate;
-        Invoke("spawn", 1f); // start spawning after 1 second
+        StartCoroutine(spawn());
     }
 
     // function that spawns opps
-    void spawn() {
-        if (Random.value < 0.5f) oppSelect = "016"; // pidgey
-        else oppSelect = "019"; // rattata
+    private bool initial = true;
+    private IEnumerator spawn() {
+        while (true) {
+            // wait one second before spawning
+            if (initial) {
+                yield return new WaitForSeconds(1f);
+                initial = false;
+            }
+            
+            // geodude spawns on wave 5
+            if (waveTracker.getWave() < 5) {
+                if (Random.value < 0.5f) oppSelect = "016"; // pidgey
+                else oppSelect = "019"; // rattata
+            } else {
+                if (Random.value < 0.33f) oppSelect = "019"; // rattata
+                else if (Random.value < 0.66f) oppSelect = "016"; // pidgey
+                else {
+                    oppSelect = "074"; // geodude
+                    spawnOne(); // geodude brings a friend
+                }
+            }
 
-        // instantiate prefab
+            // instantiate prefab with some randomness to the position of the spawns
+            GameObject spawning = Instantiate(oppPrefab);
+            if (Random.value < 0.25f) spawning.transform.position = new Vector3(-transform.position.x, -transform.position.y, transform.position.z);
+            else if (Random.value < 0.5f) spawning.transform.position = new Vector3(-transform.position.x, transform.position.y, transform.position.z);
+            else if (Random.value < 0.75f) spawning.transform.position = new Vector3(transform.position.x, -transform.position.y, transform.position.z);
+            else spawning.transform.position = transform.position;
+            if (Mathf.Abs(transform.position.x) == xBorder) spawning.transform.position = new Vector3(spawning.transform.position.x, spawning.transform.position.y * Random.value, transform.position.z);
+            else spawning.transform.position = new Vector3(spawning.transform.position.x * Random.value, spawning.transform.position.y, transform.position.z);
+
+            // get behavior based on oppSelect
+            oppcontroller oppScript = spawning.GetComponent<oppcontroller>();
+            if (oppScript) {
+                switch (oppSelect) {
+                    case "016":
+                        oppScript.spawnPidgey();
+                        break;
+                    case "019":
+                        oppScript.spawnRattata();
+                        break;
+                    case "074":
+                        oppScript.spawnGeodude();
+                        break;
+                }
+            }
+
+            // wait to spawn again
+            yield return new WaitForSeconds(spawnrate);
+        }
+    }
+    private void spawnOne() {
         GameObject spawning = Instantiate(oppPrefab);
         spawning.transform.position = transform.position;
-
-        // get behavior based on oppSelect
         oppcontroller oppScript = spawning.GetComponent<oppcontroller>();
-        if (oppScript) {
-            switch (oppSelect) {
-                case "016":
-                    oppScript.spawnPidgey();
-                    break;
-                case "019":
-                    oppScript.spawnRattata();
-                    break;
-            }
-        }
-
-        Invoke("spawn", spawnrate);
+        if (Random.value < 0.5) oppScript.spawnPidgey(); 
+        else oppScript.spawnRattata();
     }
 
     void Update() {
         // adjust spawnrate based on wave
         if (spawnrate > 1) spawnrate = defaultSpawnRate - ((waveTracker.getWave() - 1) * 0.2f);
-        else if (spawnrate > 0.1) spawnrate = Mathf.Max(0.1f, 1 - 0.1f * (waveTracker.getWave() + 1 - ((defaultSpawnRate - 0.8f) / 0.2f))); // cant go below 0.1
         MoveSpawner();
     }
 

@@ -48,6 +48,7 @@ public class playercontroller : MonoBehaviour
         healthBar = GetComponentInChildren<healthbar>();
         attackSoundEffect = gameObject.AddComponent<AudioSource>();
         attackEffects(false);
+        
         playerPikachu();
     }
 

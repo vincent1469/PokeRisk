@@ -1453,7 +1453,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   oppPrefab: {fileID: 655830408885927480, guid: 8b6f46e1390a5fe4a82f3bcd100fc1bf, type: 3}
-  changeDirectionChance: 0.1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
