@@ -74,14 +74,14 @@ public class oppcontroller : MonoBehaviour
     }
 
     void Update() {
+        CheckOutOfBounds();
         if (currentBehavior == Behavior.Melee_Passive) Melee_Passive();
         else if (currentBehavior == Behavior.Melee_QuickAttack) Melee_QuickAttack();
-        CheckOutOfBounds();
     }
 
     private void CheckOutOfBounds() {
         if (Mathf.Abs(transform.position.x) > xBorder+5) Destroy(this.gameObject);
-        else if (Mathf.Abs(transform.position.y) == yBorder+5) Destroy(this.gameObject);
+        else if (Mathf.Abs(transform.position.y) > yBorder+5) Destroy(this.gameObject);
     }
 
     // update polygon collider based on animation's shape
@@ -173,18 +173,21 @@ public class oppcontroller : MonoBehaviour
 
     // behavior where enemies move to other side unless the player intrudes
     private void Melee_Passive() {
+        // check out of bounds before anything
+        CheckOutOfBounds();
+
         // move to other side
         switch (currentDirection) {
-            case Direction.X_Pos:
+            case Direction.X_Pos: 
                 transform.position += new Vector3(speed * Time.deltaTime, 0, 0);
                 break;
-            case Direction.X_Neg:
+            case Direction.X_Neg: 
                 transform.position += new Vector3(-speed * Time.deltaTime, 0, 0);
                 break;
-            case Direction.Y_Pos:
+            case Direction.Y_Pos: 
                 transform.position += new Vector3(0, speed * Time.deltaTime, 0);
                 break;
-            case Direction.Y_Neg:
+            case Direction.Y_Neg: 
                 transform.position += new Vector3(0, -speed * Time.deltaTime, 0);
                 break;
         }
@@ -205,6 +208,9 @@ public class oppcontroller : MonoBehaviour
             currentBehavior = previousBehavior;
             return;
         }
+
+        // check out of bounds before anything
+        CheckOutOfBounds();
 
         // play sound of getting spotted and show exclamation
         if (!exclamation.activeSelf) { // was playing sound multiple times without condition

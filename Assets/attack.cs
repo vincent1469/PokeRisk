@@ -35,13 +35,15 @@ public class attack : MonoBehaviour
         // follow mouse when not on cooldown
         if (Time.time >= lastAttack + attackCooldown) {
             SetTransparency(0.5f);
+            attacking.attackEffects(false);
             FollowMouse();
             if (Input.GetMouseButtonDown(0)) { // check for left mouse click
                 Attack();
                 lastAttack = Time.time;
                 SetTransparency(0.9f);
+                attacking.attackEffects(true);
             }
-        } else { SetTransparency(0.9f); }
+        }
     }
 
     void FollowMouse() {

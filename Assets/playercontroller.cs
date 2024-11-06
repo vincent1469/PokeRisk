@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SpriteGlow;
 
 public class playercontroller : MonoBehaviour
 {
     // create variable animator and its collision
-    private Animator animator;
     private SpriteRenderer spriteRenderer;
+    private SpriteGlowEffect glow;
+    private Animator animator;
     private Rigidbody2D rb;
     private PolygonCollider2D polygonCollider;
 
@@ -38,12 +40,14 @@ public class playercontroller : MonoBehaviour
         // get animator and collision from the inspector
         transform.position = new Vector3(0, 0, 0); // start in center
         spriteRenderer = GetComponent<SpriteRenderer>();
+        glow = GetComponent<SpriteGlowEffect>();
         animator = GetComponent<Animator>();
         animator.speed = 1f; // would be 0.66 but then it updates slow
         rb = GetComponent<Rigidbody2D>();
         polygonCollider = GetComponent<PolygonCollider2D>();
         healthBar = GetComponentInChildren<healthbar>();
         attackSoundEffect = gameObject.AddComponent<AudioSource>();
+        attackEffects(false);
         playerPikachu();
     }
 
@@ -95,6 +99,10 @@ public class playercontroller : MonoBehaviour
         }
     }
 
+    public void attackEffects(bool attacking) {
+        glow.OutlineWidth =  attacking ? 1 : 0;
+    }
+
     public void TakeDamage(int damage, typechart.TYPE attackedType) {
         health -= types.FindEffectiveness(damage, attackedType, types.getType1(), types.getType2());
         healthBar.UpdateHealthBar(health, maxHealth);
@@ -110,6 +118,7 @@ public class playercontroller : MonoBehaviour
         pokemon = "025";
         types = new typechart("ELECTRIC");
         animator.SetBool("025_0", true);
+        glow.GlowColor = ColorUtility.TryParseHtmlString("#FDF23D", out var color) ? color : glow.GlowColor;
         speed = 8f;
         health = 30;
         maxHealth = 30;
