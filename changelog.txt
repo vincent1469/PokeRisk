@@ -1,0 +1,3 @@
+2024-12-11:
+- Changed background colour to black
+- Fixed camera to now always encompass the background
