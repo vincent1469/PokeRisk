@@ -106,8 +106,8 @@ public class oppcontroller : MonoBehaviour
     }
 
     private void CheckOutOfBounds() {
-        if (Mathf.Abs(transform.position.x) > xBorder+5) Destroy(this.gameObject);
-        else if (Mathf.Abs(transform.position.y) > yBorder+5) Destroy(this.gameObject);
+        if (Mathf.Abs(transform.position.x) > xBorder+3) Destroy(this.gameObject);
+        else if (Mathf.Abs(transform.position.y) > yBorder+3) Destroy(this.gameObject);
     }
 
     // update polygon collider based on animation's shape

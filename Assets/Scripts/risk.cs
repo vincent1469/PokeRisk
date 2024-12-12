@@ -27,6 +27,8 @@ public class risk : MonoBehaviour
         AdjustCameraToBackground();
     }
 
+    void Update() { AdjustCameraToBackground();  }
+
     // simple audio commands 
     public void play() { if (audioSource != null && !audioSource.isPlaying) audioSource.Play(); }
     public void stop() { if (audioSource != null && !audioSource.isPlaying) audioSource.Stop(); }

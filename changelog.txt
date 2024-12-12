@@ -1,3 +1,8 @@
 2024-12-11:
 - Changed background colour to black
 - Fixed camera to now always encompass the background
+
+2024-12-12:
+- Added Scripts folder
+- Changed out of bounds from 5 to 3
+- Fixed wave of missing scripts and sprites from moving game
